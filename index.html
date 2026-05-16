@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>瑞幸配方记忆助手</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f0eb;
+    --card: #ffffff;
+    --primary: #1a3a4a;
+    --accent: #c8a87c;
+    --accent-light: #e8d5b8;
+    --text: #2c2c2c;
+    --text-light: #6b6b6b;
+    --tag-coffee: #6b4423;
+    --tag-fruit: #d4724a;
+    --tag-coconut: #5a8a6a;
+    --tag-milk: #9a8ab8;
+    --tag-matcha: #6a9a5a;
+    --tag-tea: #b8986a;
+    --tag-special: #b06090;
+    --tag-smoothie: #c09050;
+    --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 16px;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    padding-bottom: 80px;
+  }
+  header {
+    background: linear-gradient(135deg, #1a3a4a 0%, #2a5a6a 100%);
+    color: white;
+    padding: 20px 16px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
+  header p { font-size: 13px; opacity: 0.7; margin-top: 4px; }
+  .tab-bar {
+    display: flex;
+    background: var(--card);
+    border-bottom: 1px solid #eee;
+    position: sticky;
+    top: 76px;
+    z-index: 99;
+  }
+  .tab-btn {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .tab-btn.active { color: var(--primary); font-weight: 600; }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 20%;
+    right: 20%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 3px 3px 0 0;
+  }
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+
+  .flashcard-area { max-width: 480px; margin: 0 auto; }
+  .progress-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; font-size: 13px; color: var(--text-light);
+  }
+  .progress-track {
+    flex: 1; height: 4px; background: #e0d8d0;
+    border-radius: 4px; margin: 0 12px; overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+  .card-wrapper { perspective: 1000px; margin-bottom: 16px; }
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 20px 24px;
+    min-height: 320px; cursor: pointer; transition: transform 0.3s;
+  }
+  .card:active { transform: scale(0.98); }
+  .card .side { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 280px; }
+  .card .back { text-align: left; align-items: stretch; }
+
+  .card-category {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600; margin-bottom: 12px; color: white;
+  }
+  .cat-美式家族 { background: var(--tag-coffee); }
+  .cat-经典奶咖 { background: var(--tag-milk); }
+  .cat-生椰系列 { background: var(--tag-coconut); }
+  .cat-拿铁系列 { background: var(--tag-coffee); }
+  .cat-丝绒系列 { background: var(--tag-milk); }
+  .cat-果茶\/美式 { background: var(--tag-fruit); }
+  .cat-冰萃\/柠檬茶 { background: var(--tag-tea); }
+  .cat-轻乳茶\/果蔬 { background: var(--tag-tea); }
+  .cat-奶昔 { background: var(--tag-smoothie); }
+  .cat-奶咖系 { background: var(--tag-coffee); }
+  .cat-鲜果\/特调 { background: var(--tag-special); }
+  .cat-小黑杯 { background: #4a4a4a; }
+
+  .card-name { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--primary); }
+  .card-hint { font-size: 13px; color: var(--text-light); }
+
+  .recipe-row {
+    display: flex; align-items: flex-start; gap: 8px; padding: 8px 0;
+    border-bottom: 1px solid #f0ece8; font-size: 14px; line-height: 1.6;
+  }
+  .recipe-row:last-child { border-bottom: none; }
+  .recipe-temp {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; min-width: 32px; text-align: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .temp-cold { background: #d4e0f0; color: #3a6a8a; }
+  .temp-hot { background: #f0ddd4; color: #a04a2a; }
+  .recipe-formula { color: var(--text); flex: 1; font-size: 13px; }
+  .recipe-note {
+    margin-top: 8px; padding: 8px 12px; background: #f8f4ef; border-radius: 8px;
+    font-size: 12px; color: var(--text-light); line-height: 1.5;
+  }
+  .tap-hint { text-align: center; font-size: 12px; color: var(--text-light); margin-top: 8px; opacity: 0.6; }
+
+  .card-nav { display: flex; gap: 12px; margin-top: 4px; }
+  .card-nav button {
+    flex: 1; padding: 12px; border: 2px solid #e0d8d0; border-radius: 12px;
+    background: var(--card); font-size: 15px; font-weight: 600;
+    color: var(--text); cursor: pointer; transition: all 0.2s;
+  }
+  .card-nav button:active { transform: scale(0.96); }
+  .card-nav button.knew { border-color: #6a9a5a; color: #6a9a5a; }
+  .card-nav button.knew:active { background: #eef5ea; }
+  .card-nav button.forgot { border-color: #d4724a; color: #d4724a; }
+  .card-nav button.forgot:active { background: #f5ede8; }
+
+  .mode-selector {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-bottom: 16px; max-width: 480px; margin-left: auto; margin-right: auto;
+  }
+  .mode-btn {
+    padding: 10px 12px; border: 2px solid #e0d8d0; border-radius: 12px;
+    background: var(--card); font-size: 13px; font-weight: 500;
+    cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text);
+  }
+  .mode-btn.active { border-color: var(--accent); background: #faf6f0; }
+  .mode-btn:active { transform: scale(0.96); }
+
+  .stats-bar {
+    display: flex; gap: 12px; padding: 12px 16px; background: var(--card);
+    margin: 0 0 12px; border-radius: 12px; box-shadow: var(--shadow);
+    justify-content: space-around; max-width: 480px; margin-left: auto; margin-right: auto;
+  }
+  .stat-item { text-align: center; }
+  .stat-num { font-size: 20px; font-weight: 700; color: var(--primary); }
+  .stat-label { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+  .sr-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; margin-left: 6px;
+  }
+  .sr-new { background: #e8d5b8; color: #8a6a3a; }
+  .sr-learning { background: #d4e0f0; color: #3a6a8a; }
+  .sr-review { background: #d8e8d0; color: #3a6a3a; }
+  .sr-known { background: #e0d8d0; color: #5a5a5a; }
+
+  /* Quiz */
+  .quiz-area { max-width: 480px; margin: 0 auto; }
+  .quiz-question { font-size: 18px; font-weight: 600; text-align: center; margin-bottom: 6px; color: var(--primary); }
+  .quiz-sub { text-align: center; font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
+  .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+  .quiz-option {
+    padding: 14px 16px; border: 2px solid #e0d8d0; border-radius: 12px;
+    background: var(--card); font-size: 15px; cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .quiz-option:active { transform: scale(0.97); }
+  .quiz-option.correct { border-color: #6a9a5a; background: #eef5ea; color: #3a6a2a; }
+  .quiz-option.wrong { border-color: #d4724a; background: #f5ede8; color: #a0522a; }
+  .quiz-option.disabled { pointer-events: none; opacity: 0.7; }
+  .quiz-option.revealed { border-color: #6a9a5a; background: #eef5ea; color: #3a6a2a; }
+  .quiz-next-btn {
+    margin-top: 16px; padding: 14px; width: 100%; border: none; border-radius: 12px;
+    background: var(--primary); color: white; font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .quiz-next-btn:active { transform: scale(0.97); }
+  .quiz-score { text-align: center; margin-bottom: 16px; font-size: 14px; color: var(--text-light); }
+
+  /* Browse */
+  .browse-header { display: flex; gap: 8px; margin-bottom: 16px; }
+  .browse-header input {
+    flex: 1; padding: 10px 14px; border: 2px solid #e0d8d0; border-radius: 12px;
+    font-size: 14px; background: var(--card); outline: none;
+  }
+  .browse-header input:focus { border-color: var(--accent); }
+  .browse-header select {
+    padding: 10px 12px; border: 2px solid #e0d8d0; border-radius: 12px;
+    font-size: 13px; background: var(--card); outline: none; color: var(--text);
+  }
+  .browse-list { display: flex; flex-direction: column; gap: 10px; }
+  .browse-item {
+    background: var(--card); border-radius: 12px; padding: 14px 16px;
+    box-shadow: var(--shadow); cursor: pointer; transition: all 0.2s;
+  }
+  .browse-item:active { transform: scale(0.98); }
+  .browse-item .bi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .browse-item .bi-name { font-size: 16px; font-weight: 600; }
+  .browse-item .bi-cat {
+    font-size: 11px; padding: 2px 10px; border-radius: 20px; color: white; font-weight: 600;
+  }
+  .browse-item .bi-summary { font-size: 13px; color: var(--text-light); line-height: 1.4; margin-top: 4px; }
+  .browse-item .bi-expand { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0ece8; }
+  .browse-item .bi-expand.open { display: block; }
+  .browse-empty { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 14px; }
+
+  .reset-btn {
+    display: block; margin: 16px auto; padding: 8px 20px; border: 1.5px solid #ddd;
+    border-radius: 20px; background: transparent; font-size: 12px; color: var(--text-light);
+    cursor: pointer; transition: all 0.2s;
+  }
+  .reset-btn:active { background: #f0ece8; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card, .quiz-option, .browse-item { animation: fadeIn 0.25s ease-out; }
+
+  @media (min-width: 600px) {
+    body { max-width: 600px; margin: 0 auto; }
+    header { border-radius: 0 0 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>☕ 瑞幸配方记忆助手</h1>
+  <p>点卡翻面 · 自测巩固 · 48款饮品配方</p>
+</header>
+
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="flashcard">📇 记忆卡</button>
+  <button class="tab-btn" data-tab="quiz">✍️ 自测</button>
+  <button class="tab-btn" data-tab="browse">📋 配方库</button>
+</div>
+
+<div id="panel-flashcard" class="panel active">
+  <div class="flashcard-area">
+    <div class="mode-selector">
+      <button class="mode-btn active" data-fmode="all">全部</button>
+      <button class="mode-btn" data-fmode="random">随机</button>
+      <button class="mode-btn" data-fmode="weak">易忘题</button>
+      <button class="mode-btn" data-fmode="category">按分类</button>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-item"><div class="stat-num" id="stat-total">0</div><div class="stat-label">配方总数</div></div>
+      <div class="stat-item"><div class="stat-num" id="stat-known">0</div><div class="stat-label">已掌握</div></div>
+      <div class="stat-item"><div class="stat-num" id="stat-learning">0</div><div class="stat-label">学习中</div></div>
+      <div class="stat-item"><div class="stat-num" id="stat-weak">0</div><div class="stat-label">待复习</div></div>
+    </div>
+
+    <div class="progress-bar">
+      <span id="card-index">1 / 1</span>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <span id="card-sr-badge" style="font-size:12px"></span>
+    </div>
+
+    <div class="card-wrapper">
+      <div class="card" id="flashcard">
+        <div class="side front" id="card-front">
+          <div class="card-category" id="fc-cat">分类</div>
+          <div class="card-name" id="fc-name">饮品名称</div>
+          <div class="card-hint">👆 点卡查看配方</div>
+        </div>
+        <div class="side back" id="card-back" style="display:none">
+          <div id="fc-recipe-detail"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tap-hint">👆 点击卡片翻转</div>
+
+    <div class="card-nav">
+      <button class="forgot" id="btn-forgot">😅 忘了</button>
+      <button class="knew" id="btn-knew">✅ 记住了</button>
+    </div>
+  </div>
+</div>
+
+<div id="panel-quiz" class="panel">
+  <div class="quiz-area">
+    <div class="mode-selector" style="grid-template-columns:1fr 1fr 1fr">
+      <button class="mode-btn active" data-qmode="category">猜分类</button>
+      <button class="mode-btn" data-qmode="name">猜名称</button>
+      <button class="mode-btn" data-qmode="recipe">猜配方</button>
+    </div>
+    <div class="quiz-score">
+      正确: <strong id="quiz-correct">0</strong> / 总: <strong id="quiz-total">0</strong>
+    </div>
+    <div id="quiz-container"></div>
+  </div>
+</div>
+
+<div id="panel-browse" class="panel">
+  <div class="browse-header">
+    <input type="text" id="browse-search" placeholder="🔍 搜索饮品..." />
+    <select id="browse-filter">
+      <option value="all">全部分类</option>
+      <option value="小黑杯">小黑杯</option>
+      <option value="美式家族">美式家族</option>
+      <option value="经典奶咖">经典奶咖</option>
+      <option value="生椰系列">生椰系列</option>
+      <option value="拿铁系列">拿铁系列</option>
+      <option value="丝绒系列">丝绒系列</option>
+      <option value="果茶/美式">果茶/美式</option>
+      <option value="冰萃/柠檬茶">冰萃/柠檬茶</option>
+      <option value="轻乳茶/果蔬">轻乳茶/果蔬</option>
+      <option value="奶昔">奶昔</option>
+      <option value="奶咖系">奶咖系</option>
+      <option value="鲜果/特调">鲜果/特调</option>
+    </select>
+  </div>
+  <div class="browse-list" id="browse-list"></div>
+</div>
+
+<button class="reset-btn" id="reset-btn">🔄 重置学习进度</button>
+
+<script>
+// ===================================================================
+//  配方数据库 — 来源：门店培训配方卡片（小红书@梨花诗rci整理）
+//  图标: ☕=咖啡/浓缩  🥛=牛乳/奶  🧊=冰块  🍵=抹茶  🔥=热
+//  缩写: ↑=补至上线  ↓=补至下线  缸=奶缸(打奶泡)
+//  数字: 70/100=小/大杯量  300/400=热饮小/大杯奶量(ml)
+//  8765=标准糖量预设
+// ===================================================================
+const RECIPES = [
+
+  // ==================== 小黑杯(Yirgacheffe) ====================
+  { id:'ygxf-americano', name:'耶茄雪菲美式', category:'小黑杯', tags:['耶茄雪菲','小黑杯','单品'],
+    cold:'糖 → 水中线↑ → 搅拌 → 🧊 → ☕', hot:'糖 → ☕ → 热水 → 搅拌',
+    note:'单品豆，柑橘花香突出。', coldOnly:false },
+  { id:'ygxf-latte', name:'耶茄雪菲拿铁', category:'小黑杯', tags:['耶茄雪菲','拿铁'],
+    cold:'糖 → 牛奶中线 → ☕搅拌 → 🧊', hot:'糖 → ☕(缸) → 牛奶250 → 搅拌',
+    note:null, coldOnly:false },
+  { id:'ygxf-flatwhite', name:'耶茄雪菲澳瑞白', category:'小黑杯', tags:['耶茄雪菲','澳白'],
+    cold:'糖 → 牛奶中线 → ☕ → 搅拌 → 🧊', hot:'糖 → ☕(缸) → 牛奶250 → 加热 → 搅拌',
+    note:null, coldOnly:false },
+
+  // ==================== 美式家族 ====================
+  { id:'americano', name:'标准美式', category:'美式家族', tags:['美式','经典','低卡'],
+    cold:'糖 → 水中线↑ → 搅拌 → 🧊 → ☕', hot:'糖 → ☕ → 热水 → 搅拌',
+    note:'基础美式，约5kcal。', coldOnly:false },
+  { id:'double-americano', name:'加浓美式', category:'美式家族', tags:['美式','加浓','提神'],
+    cold:'糖 → 水中线↑ → 搅拌 → 🧊 → ☕×2', hot:'糖 → ☕×2 → 热水 → 搅拌',
+    note:'双份浓缩，约150-200mg咖啡因。', coldOnly:false },
+
+  // ==================== 经典奶咖 ====================
+  { id:'latte', name:'拿铁', category:'经典奶咖', tags:['拿铁','经典','牛奶'],
+    cold:'糖 → 单奶30双奶60 → 牛奶↑ → ☕ → 搅拌 → 🧊', hot:'糖 → ☕(缸) → 牛奶300/400 → 搅拌',
+    note:'冷:奶底30ml(小)/60ml(大)。热:奶300(小)/400(大)。', coldOnly:false },
+  { id:'flatwhite', name:'澳瑞白', category:'经典奶咖', tags:['澳白','精萃','浓郁'],
+    cold:'糖 → 单奶30双奶60 → 牛奶↑ → ☕ → 搅拌 → 🧊', hot:'糖 → ☕(缸) → 牛奶250/350 → 加热 → 搅拌',
+    note:'比拿铁浓缩，奶量更少。热:250(小)/350(大)。', coldOnly:false },
+
+  // ==================== 生椰系列 ====================
+  { id:'coconut-latte', name:'生椰拿铁', category:'生椰系列', tags:['椰子','爆款','🔥'],
+    cold:'糖 → 椰浆↑ → ☕ → 🧊', hot:null,
+    note:'超级爆款！仅冷饮。约160-170kcal。', coldOnly:true },
+  { id:'coconut-cloud', name:'椰云拿铁', category:'生椰系列', tags:['椰子','奶盖','绵密'],
+    cold:'糖 → 椰汁↑ → ☕ → 🧊 → 椰云奶盖顶', hot:null,
+    note:'椰云=椰浆打发的绵密奶盖。仅冷饮。', coldOnly:true },
+
+  // ==================== 拿铁系列 ====================
+  { id:'jasmine-latte', name:'茉莉花香拿铁', category:'拿铁系列', tags:['茉莉','花香','拿铁'],
+    cold:'糖 → 茉莉花香糖浆 → 牛乳↑ → ☕ → 搅拌 → 🧊', hot:'糖 → ☕(缸) → 茉莉花香糖浆 → 牛乳250 → 搅拌',
+    note:null, coldOnly:false },
+  { id:'ethiopia-gold', name:'埃塞金烘拿铁', category:'拿铁系列', tags:['埃塞','金烘','IIAC铂金'],
+    cold:'糖 → 牛乳↑ → ☕ → 搅拌 → 🧊', hot:'糖 → ☕(缸) → 牛乳250 → 搅拌',
+    note:'IIAC铂金奖豆，2026.4上线。', coldOnly:false },
+  { id:'meteor-latte', name:'陨石拿铁', category:'拿铁系列', tags:['黑糖','晶球','经典'],
+    cold:'黑糖糖浆 → 晶球 → 牛乳↑ → ☕ → 🧊', hot:null,
+    note:'仅冷饮(晶球遇热变软)。', coldOnly:true },
+  { id:'matcha-coconut', name:'抹茶好喝椰', category:'拿铁系列', tags:['抹茶','椰子','清爽'],
+    cold:'糖 → 椰浆↑ → 🍵抹茶 → 🧊', hot:null,
+    note:'仅冷饮。', coldOnly:true },
+  { id:'coconut-trio', name:'生椰三重奏拿铁', category:'拿铁系列', tags:['椰子','三重奏','特殊'],
+    cold:'糖 → 椰浆↑ → ☕ → 椰相关辅料 → 🧊', hot:null,
+    note:'椰系衍生款，含多重椰元素。仅冷饮。', coldOnly:true },
+  { id:'matcha-latte-cup', name:'抹茶拿铁(注塑杯)', category:'拿铁系列', tags:['抹茶','注塑杯','无咖啡'],
+    cold:'糖 → 牛乳30 → 牛乳↑ → 🍵抹茶50 → 搅拌 → 🧊', hot:'糖 → 🍵抹茶50 → 牛乳250 → 加热 → 搅拌',
+    note:'注塑杯出品。抹茶液50ml。冷:先30ml奶底。', coldOnly:false },
+
+  // ==================== 丝绒系列 ====================
+  { id:'matcha-velvet', name:'抹茶丝绒拿铁', category:'丝绒系列', tags:['抹茶','丝绒','浓郁'],
+    cold:'糖 → 丝绒70 → 水↑ → 🍵抹茶 → 🧊', hot:'糖 → 丝绒70 → 水 → 🍵抹茶 → 加热搅拌',
+    note:'丝绒基底70ml，水补上线。', coldOnly:false },
+  { id:'velvet-latte', name:'丝绒拿铁', category:'丝绒系列', tags:['丝绒','顺滑','奶香'],
+    cold:'(香草)糖浆 → 丝绒70/100 → 牛奶↑ → ☕ → 🧊', hot:'(香草)糖浆 → ☕(缸) → 丝绒70/100 → 牛奶300/400 → 搅拌',
+    note:'香草版=换香草糖浆。丝绒:70(小)/100(大)。', coldOnly:false },
+  { id:'coconut-velvet', name:'生椰丝绒拿铁', category:'丝绒系列', tags:['椰子','丝绒','双重口感'],
+    cold:'糖 → 丝绒70 → 椰浆↑ → ☕ → 🧊', hot:null,
+    note:'生椰+丝绒双重口感。仅冷饮。', coldOnly:true },
+  { id:'light-coco-jasmine', name:'轻椰茉莉拿铁', category:'丝绒系列', tags:['椰子','茉莉','清爽'],
+    cold:'糖 → 椰浆 → 茉莉茶 → ☕ → 🧊', hot:'糖 → ☕(缸) → 椰浆 → 茉莉茶 → 牛奶 → 搅拌',
+    note:null, coldOnly:false },
+  { id:'snow-cheese-matcha', name:'雪酪芝士抹茶', category:'丝绒系列', tags:['芝士','抹茶','奶盖'],
+    cold:'糖 → 牛奶30 → 牛奶↑ → 🍵抹茶50 → 芝士奶泡顶 → 抹茶粉', hot:null,
+    note:'芝士奶泡+抹茶粉撒顶。仅冷饮。', coldOnly:true },
+
+  // ==================== 果茶/美式 ====================
+  { id:'snow-cheese-grape', name:'雪酪芝士葡萄', category:'果茶/美式', tags:['葡萄','芝士','果茶'],
+    cold:'糖 → 葡萄汁 → 茶底 → 🧊 → 芝士奶盖顶', hot:null,
+    note:'芝士奶盖果茶。仅冷饮。', coldOnly:true },
+  { id:'rui-matcha', name:'瑞之抹茶', category:'果茶/美式', tags:['抹茶','瑞之','特调'],
+    cold:'糖 → 🍵抹茶 → 牛乳/水 → 🧊', hot:'糖 → 🍵抹茶 → 牛乳/水 → 加热',
+    note:null, coldOnly:false },
+  { id:'orange-c', name:'橙C美式/冰茶', category:'果茶/美式', tags:['橙子','果咖','清爽'],
+    cold:'糖 → 橙汁 → 水↑ → 🧊 → ☕', hot:null,
+    note:'共两版:美式版/冰茶版。仅冷饮。约80kcal。', coldOnly:true },
+  { id:'grapefruit-c', name:'柚C美式/冰茶', category:'果茶/美式', tags:['柚子','果咖','清爽'],
+    cold:'糖 → 柚汁 → 水↑ → 🧊 → ☕', hot:null,
+    note:'共两版:美式版/冰茶版。仅冷饮。', coldOnly:true },
+  { id:'lemon-c', name:'柠C美式/冰茶', category:'果茶/美式', tags:['柠檬','果咖','清爽'],
+    cold:'糖 8765 → 柠檬汁 → 水↑ → 🧊 → ☕', hot:null,
+    note:'共两版:美式版/冰茶版。仅冷饮。', coldOnly:true },
+  { id:'apple-c', name:'苹果C美式/冰茶', category:'果茶/美式', tags:['苹果','果咖','清爽'],
+    cold:'糖 → 苹果汁 → 水↑ → 🧊 → ☕', hot:null,
+    note:'共两版:美式版/冰茶版。仅冷饮。', coldOnly:true },
+
+  // ==================== 冰萃/柠檬茶 ====================
+  { id:'grape-ice', name:'葡萄冰萃美式', category:'冰萃/柠檬茶', tags:['葡萄','气泡','冰萃'],
+    cold:'葡萄果粒×1 → 糖 → 葡萄汁100线 → 苏打水↓ → 搅拌 → 补苏打水 → ☕', hot:null,
+    note:'苏打水先↓→搅拌→再补→加咖啡。仅冷饮。', coldOnly:true },
+  { id:'coconut-water-ice', name:'椰青冰萃美式', category:'冰萃/柠檬茶', tags:['椰子','清爽','冰萃'],
+    cold:'糖 → 椰子水↑ → ☕', hot:null,
+    note:'椰子水补上线+咖啡。仅冷饮。约80kcal。', coldOnly:true },
+  { id:'grape-lemon-tea', name:'葡萄柠檬茶', category:'冰萃/柠檬茶', tags:['葡萄','柠檬','茶'],
+    cold:'糖8765 → 葡萄粒×1 → 柠檬粒×1 → 柠檬汁25 → 茶中线 → 水↑ → 绿咖50 → 葡萄汁50 → 搅拌 → 🧊', hot:null,
+    note:'柠檬汁25ml+绿咖50ml+葡萄汁50ml。仅冷饮。', coldOnly:true },
+  { id:'light-coffee-lemon', name:'轻咖柠檬茶', category:'冰萃/柠檬茶', tags:['柠檬','轻咖','茶'],
+    cold:'糖8765 → 柠檬粒×1 → 柠檬汁25 → 茶中线 → 水↑ → 绿咖50 → 搅拌 → 🧊', hot:null,
+    note:'葡萄柠檬茶的去掉葡萄版。仅冷饮。', coldOnly:true },
+  { id:'mango-pomelo', name:'杨枝甘露', category:'冰萃/柠檬茶', tags:['杨枝甘露','芒果','甜品'],
+    cold:'标准:糖→红西柚×1→晶球×1→椰奶冻100线(杯)→椰浆100→芒果150→茶200→水250→搅拌→🧊', hot:null,
+    note:'特大杯:椰奶冻130线 芒果200 茶300 水400 其余不变。仅冷饮。', coldOnly:true },
+
+  // ==================== 轻乳茶/果蔬 ====================
+  { id:'light-jasmine', name:'轻轻茉莉', category:'轻乳茶/果蔬', tags:['茉莉','轻乳茶','低卡'],
+    cold:'糖 → 牛乳30 → 茉莉茶↑ → 🧊', hot:'糖 → 牛乳30 → 茉莉茶 → 加热',
+    note:'轻乳茶系列，「三个100」标准。', coldOnly:false },
+  { id:'kale-veg', name:'羽衣·果蔬', category:'轻乳茶/果蔬', tags:['羽衣甘蓝','果蔬','健康'],
+    cold:'糖 → 羽衣甘蓝汁 → 水/茶 → 🧊', hot:null,
+    note:'果蔬系列，羽衣甘蓝基底。仅冷饮。', coldOnly:true },
+  { id:'bitter-melon-veg', name:'苦瓜清体果蔬', category:'轻乳茶/果蔬', tags:['苦瓜','果蔬','清体'],
+    cold:'糖 → 苦瓜汁 → 果蔬混合 → 🧊', hot:null,
+    note:'清体系列。仅冷饮。', coldOnly:true },
+  { id:'bitter-melon-coffee', name:'苦瓜轻体美式', category:'轻乳茶/果蔬', tags:['苦瓜','美式','轻体'],
+    cold:'糖 → 苦瓜汁 → 水 → ☕ → 🧊', hot:null,
+    note:'苦瓜+美式的清体组合。仅冷饮。', coldOnly:true },
+  { id:'yangmei-refresha', name:'杨梅瑞纳冰', category:'轻乳茶/果蔬', tags:['杨梅','瑞纳冰','冰沙'],
+    cold:'糖 → 杨梅汁/果肉 → 冰沙基底 → 🧊搅拌', hot:null,
+    note:'瑞纳冰系列。仅冷饮。', coldOnly:true },
+  { id:'coconut-cloud-matcha', name:'椰云抹抹茶', category:'轻乳茶/果蔬', tags:['椰子','抹茶','奶盖'],
+    cold:'糖 → 椰汁 → 🍵抹茶 → 🧊 → 椰云顶', hot:null,
+    note:'椰云+抹茶组合。仅冷饮。', coldOnly:true },
+
+  // ==================== 奶昔 ====================
+  { id:'avocado-kale-smoothie', name:'牛油果羽衣酸奶昔', category:'奶昔', tags:['牛油果','羽衣甘蓝','酸奶'],
+    cold:'u杯:糖→酸奶50→丝绒100→羽衣150→搅拌→倒搅拌杯→牛油果×1(小)→4/d→爆珠×1→倒冰沙铺酸奶', hot:null,
+    note:'特大杯:酸奶100线 丝绒70 羽衣200 牛油果×2(大) 爆珠×3 先酸奶后冰沙。', coldOnly:true },
+  { id:'walden-blue-mango', name:'瓦尔登蓝芒果酸奶昔', category:'奶昔', tags:['芒果','酸奶','蓝色'],
+    cold:'u杯:糖→椰浆150线→搅拌→倒搅拌杯→蓝丝绒×1(小)→4/d→晶球1勺30芒果→倒冰沙→铺酸奶', hot:null,
+    note:'特大杯:蓝丝绒×2(大) 晶球×1 酸奶100线 芒果200线 倒冰沙。', coldOnly:true },
+
+  // ==================== 奶咖系 ====================
+  { id:'mascarpone-milk', name:'马斯卡彭生酪拿铁', category:'奶咖系', tags:['马斯卡彭','奶酪','网红'],
+    cold:'糖 → 马斯卡彭70/100 → 牛奶↑ → ☕ → 🧊', hot:'糖 → ☕(缸) → 马斯卡彭70/100 → 牛奶350/450 → 高温蒸汽 → 搅拌',
+    note:'冷:70(小)/100(大)。热:奶350(小)/450(大)+高温蒸汽。', coldOnly:false },
+  { id:'caramel-macchiato', name:'焦糖玛奇朵', category:'奶咖系', tags:['焦糖','玛奇朵','经典'],
+    cold:'香草糖 → 牛奶↑ → 搅拌 → ☕ → 淋酱(横4竖4外双圈)', hot:'香草糖 → (缸)牛奶300/400 → 玛奇朵蒸汽 → 搅拌 → 淋酱(横4竖4外双圈)',
+    note:'焦糖淋酱:横4条+竖4条+外双圈。', coldOnly:false },
+  { id:'cappuccino', name:'卡布奇诺', category:'奶咖系', tags:['卡布','奶泡','经典'],
+    cold:'糖 → 牛奶↑ → 搅拌 → ☕ → 🧊', hot:'糖 → ☕(缸) → 奶250/350 → 卡布奇诺蒸汽 → 搅拌',
+    note:'热饮蒸汽厚奶泡。奶比拿铁少(250/350)。', coldOnly:false },
+  { id:'brown-sugar-oat', name:'黑糖燕麦拿铁', category:'奶咖系', tags:['黑糖','燕麦','植物奶'],
+    cold:'黑糖 → 燕麦奶↑ → ☕ → 🧊', hot:'黑糖 → ☕(缸) → 燕麦奶400/500 → 加热搅拌',
+    note:'乳糖不耐首选。热:燕麦奶400(小)/500(大)。', coldOnly:false },
+  { id:'ice-mint-coconut', name:'冰吸生椰', category:'奶咖系', tags:['椰子','冰吸','清凉'],
+    cold:'糖 → 冰吸70/100 → 椰浆↑ → ☕ → 🧊', hot:null,
+    note:'冰吸=清凉感糖浆 70(小)/100(大)。喉间清凉感。仅冷饮。', coldOnly:true },
+
+  // ==================== 鲜果/特调 ====================
+  { id:'kumquat-americano', name:'小青桔美式', category:'鲜果/特调', tags:['青桔','鲜果','清爽'],
+    cold:'青金桔×1(捣汁)→糖→青桔汁100→水↑→☕', hot:null,
+    note:'无鲜果版不加青桔。仅冷饮。', coldOnly:true },
+  { id:'kumquat-sparkle', name:'小青桔美式(气泡)', category:'鲜果/特调', tags:['青桔','气泡','清爽'],
+    cold:'青桔×1(捣汁)→糖→青桔汁100→苏打水↓→敲震杯子两下→补苏打水→☕', hot:null,
+    note:'不可去冰少冰。敲震后补苏打水。仅冷饮。', coldOnly:true },
+  { id:'cocoa-vienna', name:'可可维也纳', category:'鲜果/特调', tags:['可可','维也纳','特调'],
+    cold:'(u杯)奶缸接☕→(摇壶)香草籽糖→巧克力预制液50→牛乳至100→水至150→☕(小)→咖啡→扣盖摇匀→入杯加打奶油→撒可可粉', hot:null,
+    note:'特调。摇壶混合+打奶油顶+可可粉。不可去冰少冰。', coldOnly:true },
+  { id:'scarlet-moon', name:'绯色月光(不含酒精)', category:'鲜果/特调', tags:['绯色月光','特调','无酒精'],
+    cold:'(u杯)(摇壶)荔枝30→葡萄100→青露150→☕至300→入杯→咖啡→搅拌→樱花云顶至杯口→撒树莓粉', hot:null,
+    note:'荔枝30+葡萄100+青露150+☕至300ml。不可去冰少冰。', coldOnly:true },
+  { id:'scarlet-moon-alc', name:'绯色月光(含酒精)', category:'鲜果/特调', tags:['绯色月光','特调','含酒精'],
+    cold:'(u杯)(摇壶)酒15ml→荔枝30→葡萄100→青露150→☕至300→入杯→咖啡→搅拌→樱花云顶至杯口→撒树莓粉', hot:null,
+    note:'含酒15ml+其余同无酒精版。需出示身份证。不可去冰少冰。', coldOnly:true },
+
+];
+
+// ===================================================================
+//  SPACED REPETITION
+// ===================================================================
+const STORAGE_KEY = 'luckin_sr_v2';
+
+function loadSR() { try { const r=localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):{}; } catch(e){} return {}; }
+function saveSR(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function getSR(id) { const d=loadSR(); if(!d[id]) d[id]={id,level:0,nextReview:0,totalCorrect:0,totalAttempts:0}; return d[id]; }
+function updateSR(id, correct) {
+  const d=loadSR(); if(!d[id]) d[id]={id,level:0,nextReview:0,totalCorrect:0,totalAttempts:0};
+  const sr=d[id]; sr.totalAttempts++;
+  if(correct) { sr.totalCorrect++; sr.level=Math.min(sr.level+1,5);
+    const t=[60000,600000,86400000,259200000,604800000,1209600000]; sr.nextReview=Date.now()+(t[sr.level]||t[5]);
+  } else { sr.level=Math.max(sr.level-1,0); sr.nextReview=Date.now()+60000; }
+  saveSR(d);
+}
+function getSRStatus(sr) {
+  if(sr.totalAttempts===0) return {label:'新',cls:'sr-new'};
+  if(sr.level<=1) return {label:'学习中',cls:'sr-learning'};
+  if(sr.level<=3) return {label:'复习中',cls:'sr-review'};
+  return {label:'已掌握',cls:'sr-known'};
+}
+function getDueCards() { return RECIPES.filter(r=>{const s=getSR(r.id);return s.nextReview<=Date.now()||s.totalAttempts===0;}); }
+function getWeakCards() { return RECIPES.filter(r=>{const s=getSR(r.id);return s.totalAttempts>0&&s.level<=1;}); }
+function resetAllSR() { saveSR({}); updateStats(); }
+
+// ===================================================================
+//  FLASHCARD
+// ===================================================================
+let fcQueue=[], fcIndex=0, fcShowing=false, fcMode='all';
+function buildQueue() {
+  const w=getWeakCards().map(r=>r.id);
+  switch(fcMode) {
+    case 'all': fcQueue=RECIPES.map(r=>r.id); break;
+    case 'random': fcQueue=[...RECIPES.map(r=>r.id)].sort(()=>Math.random()-0.5); break;
+    case 'weak': fcQueue=w.length?w:RECIPES.map(r=>r.id); break;
+    case 'category': {
+      const cats=[...new Set(RECIPES.map(r=>r.category))];
+      const cat=prompt('选分类：'+cats.join('、'),cats[0]);
+      fcQueue=cat&&cats.includes(cat)?RECIPES.filter(r=>r.category===cat).map(r=>r.id):RECIPES.map(r=>r.id);
+      break;
+    }
+    default: fcQueue=RECIPES.map(r=>r.id);
+  }
+  fcIndex=0; fcShowing=false; showCard();
+}
+
+function showCard() {
+  if(!fcQueue.length){buildQueue();return;}
+  if(fcIndex>=fcQueue.length) fcIndex=0;
+  const r=RECIPES.find(d=>d.id===fcQueue[fcIndex]); if(!r){fcIndex++;showCard();return;}
+  const sr=getSR(r.id), st=getSRStatus(sr);
+  document.getElementById('card-index').textContent=`${fcIndex+1} / ${fcQueue.length}`;
+  document.getElementById('progress-fill').style.width=`${((fcIndex+1)/fcQueue.length)*100}%`;
+  const badge=document.getElementById('card-sr-badge');
+  badge.textContent=st.label; badge.className='sr-badge '+st.cls;
+
+  const catEl=document.getElementById('fc-cat');
+  catEl.textContent=r.category;
+  catEl.className='card-category cat-'+r.category.replace(/\//g,'\\/');
+
+  document.getElementById('fc-name').textContent=r.name;
+
+  let html=`<div class="card-name" style="font-size:18px;margin-bottom:14px;text-align:center">${r.name}</div>`;
+  if(r.cold){
+    html+=`<div class="recipe-row"><span class="recipe-temp temp-cold">❄️冷</span><span class="recipe-formula">${r.cold}</span></div>`;
+  }
+  if(r.hot){
+    html+=`<div class="recipe-row"><span class="recipe-temp temp-hot">🔥热</span><span class="recipe-formula">${r.hot}</span></div>`;
+  }
+  if(r.note) html+=`<div class="recipe-note">${r.note}</div>`;
+  document.getElementById('fc-recipe-detail').innerHTML=html;
+  showFront(); updateStats();
+}
+
+function showFront(){document.getElementById('card-front').style.display='flex';document.getElementById('card-back').style.display='none';fcShowing=false;}
+function showBack(){document.getElementById('card-front').style.display='none';document.getElementById('card-back').style.display='flex';fcShowing=true;}
+function flipCard(){fcShowing?showFront():showBack();}
+function nextCard(ok){
+  updateSR(fcQueue[fcIndex],ok); fcIndex++;
+  if(fcIndex>=fcQueue.length){if(fcMode==='weak'&&getWeakCards().length)buildQueue();else{fcIndex=0;if(fcMode==='random')fcQueue=[...RECIPES.map(r=>r.id)].sort(()=>Math.random()-0.5);}}
+  fcShowing=false; showCard();
+}
+
+document.getElementById('flashcard').addEventListener('click', flipCard);
+document.getElementById('btn-knew').addEventListener('click',e=>{e.stopPropagation();nextCard(true);});
+document.getElementById('btn-forgot').addEventListener('click',e=>{e.stopPropagation();nextCard(false);});
+
+// ===================================================================
+//  QUIZ
+// ===================================================================
+let qMode='category', qQueue=[], qIdx=0, qCorrect=0, qTotal=0, qAnswered=false;
+function buildQuiz(){
+  qQueue=[...RECIPES].sort(()=>Math.random()-0.5); qIdx=0; qCorrect=0; qTotal=0; qAnswered=false;
+  document.getElementById('quiz-correct').textContent='0'; document.getElementById('quiz-total').textContent='0';
+  showQuestion();
+}
+function showQuestion(){
+  if(qIdx>=qQueue.length){
+    document.getElementById('quiz-container').innerHTML=`
+      <div style="text-align:center;padding:40px 20px">
+        <div style="font-size:48px;margin-bottom:16px">🎉</div>
+        <div style="font-size:20px;font-weight:600">全部答完！</div>
+        <div style="margin:12px 0;font-size:16px;color:var(--text-light)">正确率: ${qTotal>0?Math.round(qCorrect/qTotal*100):0}% (${qCorrect}/${qTotal})</div>
+        <button class="quiz-next-btn" onclick="buildQuiz()" style="margin-top:20px">再来一轮</button>
+      </div>`; return;
+  }
+  const r=qQueue[qIdx]; qAnswered=false;
+  if(qMode==='category'){
+    const cats=[...new Set(RECIPES.map(d=>d.category))];
+    const wrong=cats.filter(c=>c!==r.category).sort(()=>Math.random()-0.5).slice(0,3);
+    const opts=[r.category,...wrong].sort(()=>Math.random()-0.5);
+    let h=`<div class="quiz-question">「${r.name}」属于哪个分类？</div><div class="quiz-sub">点击正确答案</div><div class="quiz-options">`;
+    opts.forEach(o=>h+=`<div class="quiz-option" data-correct="${o===r.category}" onclick="answerQuiz(this,'${o===r.category}')">${o}</div>`);
+    h+='</div>'; document.getElementById('quiz-container').innerHTML=h;
+  } else if(qMode==='name'){
+    const recipeStr=r.cold||'';
+    const others=RECIPES.filter(d=>d.id!==r.id).sort(()=>Math.random()-0.5).slice(0,3);
+    const opts=[r,...others].sort(()=>Math.random()-0.5);
+    let h=`<div class="quiz-question">配方如下：</div><div class="quiz-sub" style="font-size:13px;color:var(--primary);margin-bottom:12px;max-height:80px;overflow:hidden">${recipeStr.substring(0,120)}</div><div class="quiz-sub">猜猜是哪款饮品？</div><div class="quiz-options">`;
+    opts.forEach(d=>h+=`<div class="quiz-option" data-correct="${d.id===r.id}" onclick="answerQuiz(this,'${d.id===r.id}')">${d.name}</div>`);
+    h+='</div>'; document.getElementById('quiz-container').innerHTML=h;
+  } else if(qMode==='recipe'){
+    const allCats=[...new Set(RECIPES.map(d=>d.category))];
+    const wrong=allCats.filter(c=>c!==r.category).sort(()=>Math.random()-0.5).slice(0,3);
+    const opts=[r.category,...wrong].sort(()=>Math.random()-0.5);
+    let h=`<div class="quiz-question">「${r.name}」</div><div class="quiz-sub">配方是？</div><div class="quiz-options">`;
+    const fakeRecipes=RECIPES.filter(d=>d.category!==r.category).sort(()=>Math.random()-0.5).slice(0,3);
+    const choices=[{txt:r.cold||r.hot,correct:true},...fakeRecipes.map(d=>({txt:d.cold||d.hot||'',correct:false}))].filter(c=>c.txt).sort(()=>Math.random()-0.5);
+    choices.forEach(c=>h+=`<div class="quiz-option" data-correct="${c.correct}" onclick="answerQuiz(this,'${c.correct}')">${c.txt.substring(0,100)}</div>`);
+    h+='</div>'; document.getElementById('quiz-container').innerHTML=h;
+  }
+}
+function answerQuiz(el, isCorrect){
+  if(qAnswered) return; qAnswered=true; qTotal++;
+  if(isCorrect==='true'){qCorrect++;el.classList.add('correct');}
+  else{el.classList.add('wrong');document.querySelectorAll('.quiz-option').forEach(o=>{if(o.dataset.correct==='true')o.classList.add('revealed');o.classList.add('disabled');});}
+  document.getElementById('quiz-correct').textContent=qCorrect; document.getElementById('quiz-total').textContent=qTotal;
+  const nb=document.createElement('button'); nb.className='quiz-next-btn'; nb.textContent=qIdx<qQueue.length-1?'下一题 →':'查看结果'; nb.onclick=()=>{qIdx++;showQuestion();};
+  const c=document.getElementById('quiz-container'); if(!c.querySelector('.quiz-next-btn'))c.appendChild(nb);
+}
+
+// ===================================================================
+//  BROWSE
+// ===================================================================
+function renderBrowseList(){
+  const s=document.getElementById('browse-search').value.toLowerCase();
+  const f=document.getElementById('browse-filter').value;
+  let filtered=RECIPES.filter(r=>{if(f!=='all'&&r.category!==f)return false;if(s&&!r.name.toLowerCase().includes(s)&&!r.category.toLowerCase().includes(s)&&!r.tags.some(t=>t.toLowerCase().includes(s)))return false;return true;});
+  const list=document.getElementById('browse-list');
+  if(!filtered.length){list.innerHTML='<div class="browse-empty">没有匹配的饮品 🫗</div>';return;}
+  list.innerHTML=filtered.map(r=>{
+    const recipeLines=[];
+    if(r.cold) recipeLines.push(`<div class="recipe-row"><span class="recipe-temp temp-cold">❄️</span><span class="recipe-formula">${r.cold}</span></div>`);
+    if(r.hot) recipeLines.push(`<div class="recipe-row"><span class="recipe-temp temp-hot">🔥</span><span class="recipe-formula">${r.hot}</span></div>`);
+    const n=r.note?`<div class="recipe-note">${r.note}</div>`:'';
+    const summary=r.cold||r.hot||'';
+    return `<div class="browse-item" onclick="this.querySelector('.bi-expand').classList.toggle('open')">
+      <div class="bi-header"><span class="bi-name">${r.name}</span><span class="bi-cat cat-${r.category.replace(/\//g,'\\/')}">${r.category}</span></div>
+      <div class="bi-summary">${summary.substring(0,80)}${summary.length>80?'...':''}</div>
+      <div class="bi-expand">${recipeLines.join('')}${n}</div>
+    </div>`;
+  }).join('');
+}
+document.getElementById('browse-search').addEventListener('input',renderBrowseList);
+document.getElementById('browse-filter').addEventListener('change',renderBrowseList);
+
+// ===================================================================
+//  HELPERS
+// ===================================================================
+function updateStats(){
+  const d=loadSR(); let known=0,learning=0,weak=RECIPES.length;
+  RECIPES.forEach(r=>{const s=d[r.id];if(s&&s.totalAttempts>0){weak--;if(s.level>=4)known++;else if(s.level>=2)learning++;}});
+  document.getElementById('stat-total').textContent=RECIPES.length;
+  document.getElementById('stat-known').textContent=known;
+  document.getElementById('stat-learning').textContent=learning;
+  document.getElementById('stat-weak').textContent=weak;
+}
+
+// ===================================================================
+//  TABS & MODES
+// ===================================================================
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  document.getElementById('panel-'+b.dataset.tab).classList.add('active');
+  if(b.dataset.tab==='flashcard')buildQueue();
+  if(b.dataset.tab==='quiz')buildQuiz();
+  if(b.dataset.tab==='browse')renderBrowseList();
+}));
+document.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-fmode]').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  fcMode=b.dataset.fmode; buildQueue();
+}));
+document.querySelectorAll('[data-qmode]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-qmode]').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  qMode=b.dataset.qmode; buildQuiz();
+}));
+document.getElementById('reset-btn').addEventListener('click',()=>{if(confirm('确定重置所有学习进度？')){resetAllSR();buildQueue();}});
+
+// ===================================================================
+//  INIT
+// ===================================================================
+buildQueue(); updateStats();
+</script>
+</body>
+</html>
